@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Research Engine v3.3 Logs Upgrade (Thai Edition)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js (Latest) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js Annotation Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MathJax for Formulas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #111827; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(75, 85, 99, 0.4);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Input Styles */
+        .opt-input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: monospace;
+            font-size: 11px;
+            outline: none;
+            transition: all 0.2s;
+            color: #fbbf24;
+            text-align: center;
+            width: 100%;
+        }
+        .opt-input:focus { border-color: #f59e0b; background: rgba(0,0,0,0.5); }
+        
+        /* Range Group */
+        .range-group { display: flex; gap: 4px; align-items: center; }
+        .range-sep { font-size: 9px; color: #6b7280; font-weight: bold; }
+
+        /* Tooltip Styles */
+        .has-tooltip { position: relative; cursor: help; margin-left: 4px; color: #6b7280; transition: color 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .has-tooltip:hover { color: #f59e0b; }
+        
+        .tooltip-content {
+            visibility: hidden; position: absolute; bottom: 140%; left: 50%; transform: translateX(-50%);
+            width: 320px; background-color: #1f2937; color: #d1d5db; text-align: left;
+            border-radius: 8px; padding: 12px; opacity: 0; transition: opacity 0.2s;
+            border: 1px solid #374151; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.9);
+            pointer-events: none; font-size: 11px; line-height: 1.5;
+            z-index: 9999; 
+        }
+        .has-tooltip:hover .tooltip-content { visibility: visible; opacity: 1; }
+        .tooltip-title { color: #f59e0b; font-weight: bold; font-size: 12px; margin-bottom: 6px; display: block; border-bottom: 1px solid #374151; padding-bottom: 4px; }
+        .tooltip-formula { background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; font-family: monospace; margin: 6px 0; display: block; color: #60a5fa; text-align: center; border: 1px dashed #374151; }
+        .tooltip-ex { color: #9ca3af; font-style: italic; border-left: 3px solid #374151; padding-left: 8px; margin-top: 6px; display: block; background: rgba(255,255,255,0.02); padding: 4px 8px; border-radius: 0 4px 4px 0; }
+
+        /* Log Table */
+        .log-table { width: 100%; min-width: 800px; /* Ensure horizontal scroll on small screens */ }
+        .log-table td, .log-table th { padding: 8px 12px; font-size: 11px; font-family: monospace; border-bottom: 1px solid #374151; vertical-align: middle; white-space: nowrap; }
+        .log-table th { text-transform: uppercase; color: #9ca3af; text-align: left; background: #111827; position: sticky; top: 0; z-index: 20; box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .log-buy { color: #4ade80; font-weight: bold; }
+        .log-sell { color: #f87171; font-weight: bold; }
+        .log-alloc { color: #9ca3af; font-size: 10px; line-height: 1.4; white-space: normal; min-width: 200px; }
+        .alloc-tag { display: inline-block; background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 3px; margin: 1px; border: 1px solid rgba(255,255,255,0.05); }
+
+        .tab-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .tab-active { border-color: #f59e0b; color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .tab-inactive { color: #9ca3af; hover:text-gray-200; }
+        
+        .metric-card { background: rgba(31, 41, 55, 0.5); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 6px; padding: 6px 8px; text-align: center; }
+        .metric-val { font-family: monospace; font-weight: bold; font-size: 13px; }
+        .metric-label { font-size: 9px; color: #9ca3af; text-transform: uppercase; margin-top: 2px; font-weight: bold; }
+        .bench-val { font-size: 8px; color: #6b7280; margin-top: 2px; font-family: monospace; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2px; }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; width: 100%; }
+        
+        .metric-pos { color: #4ade80; }
+        .metric-neg { color: #f87171; }
+        .metric-neu { color: #fbbf24; }
+        .metric-vol { color: #60a5fa; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #111827; border: 1px solid #374151; border-radius: 16px; width: 90%; max-width: 1000px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        
+        /* Infographic Steps */
+        .info-step { display: flex; align-items: flex-start; margin-bottom: 24px; position: relative; }
+        .info-step:last-child { margin-bottom: 0; }
+        .info-step::after { content: ''; position: absolute; left: 24px; top: 50px; bottom: -24px; width: 2px; background: #374151; z-index: 0; }
+        .info-step:last-child::after { display: none; }
+        .step-icon { width: 50px; height: 50px; background: #1f2937; border: 2px solid #f59e0b; color: #f59e0b; rounded-full; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; z-index: 10; flex-shrink: 0; margin-right: 20px; box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+        .step-content { background: rgba(31, 41, 55, 0.5); border: 1px solid #374151; border-radius: 8px; padding: 16px; flex-grow: 1; }
+        
+        .strat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px; }
+        .strat-card { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; font-size: 11px; }
+        .strat-name { color: #60a5fa; font-weight: bold; margin-bottom: 4px; font-size: 12px; }
+        .strat-formula { background: rgba(0,0,0,0.3); padding: 4px; border-radius: 4px; font-family: monospace; color: #fbbf24; margin-bottom: 4px; display: block; }
+        .strat-ex { color: #9ca3af; font-style: italic; border-left: 2px solid #4b5563; padding-left: 6px; }
+        
+        /* Pagination */
+        .pagination-btn { background: #374151; color: #d1d5db; border: 1px solid #4b5563; padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
+        .pagination-btn:hover:not(:disabled) { background: #f59e0b; color: #111827; border-color: #f59e0b; transform: translateY(-1px); }
+        .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 p-3 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded flex items-center justify-center text-gray-900 font-bold text-lg shadow">B</div>
+                <h1 class="text-lg font-bold text-gray-100 tracking-wider">
+                    RESEARCH ENGINE <span class="text-xs bg-gray-700 text-yellow-500 px-2 py-0.5 rounded ml-2 border border-yellow-500/20">v3.3 Logs Upgrade</span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="dateRangeDisplay" class="text-xs font-mono text-yellow-500 font-bold hidden md:inline">Waiting for Data...</span>
+                <button onclick="toggleModal('infoModal')" class="bg-gray-700 hover:bg-gray-600 text-xs px-3 py-1.5 rounded transition flex items-center gap-2 border border-gray-600 shadow-sm">
+                    <i class="fas fa-project-diagram text-yellow-500"></i> System Workflow
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 flex-grow flex flex-col gap-4">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+            
+            <!-- LEFT: CONFIG PANEL -->
+            <div class="lg:col-span-3 space-y-4 flex flex-col">
+                <div class="glass-panel p-4 rounded-xl flex-grow">
+                    <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-2">
+                        <h2 class="text-xs font-bold text-gray-300 uppercase"><i class="fas fa-sliders-h mr-2"></i> Configuration</h2>
+                    </div>
+                    
+                    <!-- Asset Universe -->
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[10px] text-gray-400 font-bold uppercase">Universe (Static)</label>
+                            <i class="fas fa-question-circle has-tooltip">
+                                <div class="tooltip-content">
+                                    <span class="tooltip-title">Static Universe (รายการเหรียญแบบคงที่)</span>
+                                    <p class="mb-1">ท่านต้องระบุรายชื่อเหรียญที่ต้องการทดสอบด้วยตนเอง (Pool) ระบบจะคัดเลือกเข้าพอร์ตจากรายชื่อเหล่านี้เท่านั้น</p>
+                                    <p class="text-xs text-yellow-500 border-t border-gray-600 pt-1 mt-1">
+                                        *ระบบจะสร้างข้อมูลจำลอง (Mock Data) อัตโนมัติหากเชื่อมต่อ API ไม่ได้ (CORS Block)
+                                    </p>
+                                </div>
+                            </i>
+                        </div>
+                        <input type="text" id="universeInput" 
+                               class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-xs text-yellow-400 font-mono focus:outline-none focus:border-yellow-500 uppercase mb-2"
+                               value="BTC,ETH,BNB,SOL,XRP,ADA,DOGE,DOT,AVAX,LINK">
+                        
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-gray-500 uppercase font-bold">Bench:</span>
+                            <input type="text" id="benchmarkInput" value="BTC" class="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-blue-400 font-mono focus:outline-none focus:border-blue-500 w-20 text-center uppercase">
+                            <i class="fas fa-question-circle has-tooltip">
+                                <div class="tooltip-content">
+                                    <span class="tooltip-title">Benchmark (ดัชนีชี้วัด)</span>
+                                    สินทรัพย์ที่ใช้เปรียบเทียบผลตอบแทน (Buy & Hold Strategy)
+                                    <span class="tooltip-ex">Ex: BTC (เพื่อดูว่าเทรดเอง ชนะถือ Bitcoin เฉยๆ หรือไม่)</span>
+                                </div>
+                            </i>
+                        </div>
+                    </div>
+
+                    <!-- Range Inputs -->
+                    <div class="space-y-3 mb-4 border-t border-gray-700 pt-3">
+                        <!-- Lookback -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] text-gray-400 font-bold uppercase">Lookback (Days)</label>
+                                <i class="fas fa-question-circle has-tooltip">
+                                    <div class="tooltip-content">
+                                        <span class="tooltip-title">Lookback Period (ระยะย้อนหลัง)</span>
+                                        ช่วงเวลาที่ใช้คำนวณค่า Momentum หรือ Volatility ก่อนตัดสินใจซื้อขาย
+                                        <span class="tooltip-formula">Return = (Price_t / Price_{t-n}) - 1</span>
+                                        <span class="tooltip-ex">Start: 7, End: 21, Step: 7 <br>-> ระบบจะทดสอบค่า n = 7, 14, 21 วัน (Grid Search)</span>
+                                    </div>
+                                </i>
+                            </div>
+                            <div class="range-group">
+                                <input id="lbStart" type="number" value="7" class="opt-input" placeholder="Start">
+                                <span class="range-sep">~</span>
+                                <input id="lbEnd" type="number" value="60" class="opt-input" placeholder="End">
+                                <span class="range-sep">+</span>
+                                <input id="lbStep" type="number" value="7" class="opt-input" placeholder="Step">
+                            </div>
+                        </div>
+                        
+                        <!-- Rebalance -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] text-gray-400 font-bold uppercase">Rebalance (Days)</label>
+                                <i class="fas fa-question-circle has-tooltip">
+                                    <div class="tooltip-content">
+                                        <span class="tooltip-title">Rebalance Frequency (ความถี่ปรับพอร์ต)</span>
+                                        ระยะเวลาในการปรับสัดส่วนพอร์ตใหม่ให้ตรงตามกลยุทธ์
+                                        <span class="tooltip-formula">If (Day % RB == 0) -> Rebalance</span>
+                                        <span class="tooltip-ex">Start: 7, End: 30 <br>-> ทดสอบการปรับพอร์ตทุก 7 วัน จนถึง 30 วัน</span>
+                                    </div>
+                                </i>
+                            </div>
+                            <div class="range-group">
+                                <input id="rbStart" type="number" value="7" class="opt-input" placeholder="Start">
+                                <span class="range-sep">~</span>
+                                <input id="rbEnd" type="number" value="30" class="opt-input" placeholder="End">
+                                <span class="range-sep">+</span>
+                                <input id="rbStep" type="number" value="7" class="opt-input" placeholder="Step">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Money Mgmt -->
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Initial ($)</label>
+                            <input type="number" id="capital" value="10000" class="opt-input">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Fee (%)</label>
+                            <input type="number" id="fee" value="0.1" step="0.01" class="opt-input">
+                        </div>
+                    </div>
+
+                    <!-- Action -->
+                    <button id="fetchBtn" onclick="runPipeline()" class="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-gray-900 font-bold py-2.5 px-4 rounded text-xs uppercase tracking-wider transition shadow-lg transform hover:scale-[1.02] mb-3">
+                        <i class="fas fa-play mr-1"></i> Start Simulation
+                    </button>
+
+                    <!-- Status -->
+                    <div>
+                        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+                            <span>Progress</span>
+                            <span id="simCount">0/0</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-1.5 mb-2 overflow-hidden">
+                            <div id="progressBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <div id="statusBox" class="text-[9px] font-mono text-gray-400 h-20 overflow-y-auto custom-scroll bg-black/30 p-1.5 rounded border border-gray-700/50">
+                            > System Ready.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER/RIGHT: ANALYTICS -->
+            <div class="lg:col-span-9 flex flex-col gap-4">
+                
+                <!-- TOP PANEL: VISUALIZATION (Tabs) -->
+                <!-- Increased height from h-[500px] to h-[600px] for better Monte Carlo visibility -->
+                <div class="glass-panel rounded-xl overflow-hidden flex flex-col h-[600px] relative">
+                    <!-- Tabs Header -->
+                    <div class="flex border-b border-gray-700 bg-gray-800/50">
+                        <button onclick="setTab('chart')" id="tab-chart" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wide tab-btn tab-active"><i class="fas fa-chart-area mr-1"></i> Equity</button>
+                        <button onclick="setTab('landscape')" id="tab-landscape" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wide tab-btn tab-inactive"><i class="fas fa-cubes mr-1"></i> 3D Grid</button>
+                        <button onclick="setTab('dist')" id="tab-dist" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wide tab-btn tab-inactive"><i class="fas fa-chart-bar mr-1"></i> Risk Profile</button>
+                        <button onclick="setTab('monte')" id="tab-monte" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wide tab-btn tab-inactive"><i class="fas fa-random mr-1"></i> Monte Carlo</button>
+                        <button onclick="setTab('logs')" id="tab-logs" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wide tab-btn tab-inactive"><i class="fas fa-list-ul mr-1"></i> Logs</button>
+                    </div>
+
+                    <!-- Tab Content Area -->
+                    <div class="p-1 flex-grow relative bg-gray-900/50">
+                        
+                        <!-- 1. EQUITY CHART -->
+                        <div id="panel-chart" class="h-full w-full flex flex-col p-3">
+                            <div class="flex flex-col gap-2 mb-2">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-xs text-yellow-500 font-bold uppercase">Performance Metrics</h3>
+                                        <i class="fas fa-question-circle has-tooltip">
+                                            <div class="tooltip-content">
+                                                <span class="tooltip-title">Performance Metrics (ตัวชี้วัด)</span>
+                                                <div class="mb-2">
+                                                    <strong>Sharpe:</strong> ผลตอบแทนเทียบความเสี่ยง (ยิ่งสูงยิ่งดี) <br>
+                                                    <span class="text-blue-400 font-mono text-[10px]">(Return - Rf) / Volatility</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <strong>Win30d:</strong> โอกาสชนะในรอบ 30 วัน <br>
+                                                    <span class="text-blue-400 font-mono text-[10px]">% of 30-Day Windows > 0</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <strong>MaxDD:</strong> การขาดทุนสูงสุดจากจุดสูงสุดเดิม <br>
+                                                    <span class="text-blue-400 font-mono text-[10px]">Min((Val - Peak) / Peak)</span>
+                                                </div>
+                                            </div>
+                                        </i>
+                                    </div>
+                                    <div id="chartLabel" class="text-[10px] text-gray-400 font-mono">Select a strategy below</div>
+                                </div>
+                                <!-- KPI BAR (Refined Grid) -->
+                                <div class="metric-grid" id="kpiBar">
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">Sharpe</div></div>
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">Win30d</div></div>
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">CAGR</div></div>
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">MaxDD</div></div>
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">Volatility</div></div>
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">Roll Avg</div></div>
+                                    <div class="metric-card"><div class="metric-val text-gray-500">-</div><div class="metric-label">Worst M</div></div>
+                                </div>
+                            </div>
+                            <!-- Charts Container -->
+                            <div class="flex-grow flex flex-col gap-2">
+                                <div class="relative h-2/3 bg-black/20 rounded border border-gray-700/30 p-2">
+                                    <canvas id="equityChart"></canvas>
+                                </div>
+                                <div class="relative h-1/3 bg-black/20 rounded border border-gray-700/30 p-2">
+                                    <canvas id="drawdownChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. 3D LANDSCAPE -->
+                        <div id="panel-landscape" class="h-full w-full hidden flex flex-col p-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xs text-purple-400 font-bold uppercase">3D Parameter Landscape</h3>
+                                    <i class="fas fa-question-circle has-tooltip">
+                                        <div class="tooltip-content">
+                                            <span class="tooltip-title">3D Parameter Landscape</span>
+                                            แผนภาพ 3 มิติแสดงผลลัพธ์ของทุกชุดพารามิเตอร์ (LB x RB) เพื่อหาความเสถียรของกลยุทธ์
+                                            <ul class="list-disc ml-4 mt-2 text-gray-400">
+                                                <li><strong>ยอดเขา (Peak):</strong> จุดที่ได้กำไรสูงสุด</li>
+                                                <li><strong>ที่ราบ (Plateau):</strong> พื้นที่ที่ผลลัพธ์ดีต่อเนื่อง (แสดงถึงความ Robust)</li>
+                                            </ul>
+                                        </div>
+                                    </i>
+                                </div>
+                                <select id="landscapeMetric" onchange="renderLandscape()" class="bg-gray-800 text-[10px] text-white border border-gray-600 rounded px-2 py-1 cursor-pointer">
+                                    <option value="Sharpe">Metric: Sharpe</option>
+                                    <option value="Win30d">Metric: Win30d %</option>
+                                    <option value="CAGR">Metric: CAGR</option>
+                                    <option value="MaxDD">Metric: Drawdown</option>
+                                    <option value="RobustScore">Metric: Robust Score</option>
+                                </select>
+                            </div>
+                            <div id="landscapeDiv" class="flex-grow w-full bg-black/20 rounded border border-gray-700/30"></div>
+                        </div>
+
+                        <!-- 3. DISTRIBUTION (RISK PROFILE) -->
+                        <div id="panel-dist" class="h-full w-full hidden flex flex-col p-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xs text-blue-400 font-bold uppercase">Risk Profile Distribution</h3>
+                                    <i class="fas fa-question-circle has-tooltip">
+                                        <div class="tooltip-content">
+                                            <span class="tooltip-title">Risk Profile (การกระจายตัวของผลลัพธ์)</span>
+                                            กราฟ Histogram แสดงความถี่ของผลลัพธ์จากการทดสอบทั้งหมด
+                                            <ul class="list-disc ml-4 mt-2 text-gray-400">
+                                                <li><strong>Mean (ขาว):</strong> ค่าเฉลี่ยของกลยุทธ์นี้</li>
+                                                <li><strong>±1SD (เขียว):</strong> ช่วงที่ผลลัพธ์ส่วนใหญ่ (68%) จะเกิดขึ้น</li>
+                                                <li>ถ้ากราฟเบ้ขวา (หางยาวไปทางค่ามาก) ถือว่ามีโอกาสทำกำไรสูง</li>
+                                            </ul>
+                                        </div>
+                                    </i>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex gap-3 text-[9px] mr-3 items-center">
+                                        <span class="flex items-center"><span class="w-3 h-3 bg-green-500/20 border border-green-500 mr-1 rounded-sm"></span>±1SD</span>
+                                        <span class="flex items-center"><span class="w-3 h-3 bg-yellow-500/20 border border-yellow-500 mr-1 rounded-sm"></span>±2SD</span>
+                                        <span class="flex items-center"><span class="w-0.5 h-3 bg-white mr-1 ml-1"></span>Mean</span>
+                                    </div>
+                                    <select id="distMetric" onchange="renderDistribution()" class="bg-gray-800 text-[10px] text-white border border-gray-600 rounded px-2 py-1 cursor-pointer">
+                                        <option value="RobustScore">Dist: Robust Score (R-SCORE)</option>
+                                        <option value="Sharpe">Dist: Sharpe Ratio</option>
+                                        <option value="Win30d">Dist: Win30d %</option>
+                                        <option value="CAGR">Dist: CAGR %</option>
+                                        <option value="MaxDD">Dist: Max Drawdown %</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="relative flex-grow bg-black/20 rounded border border-gray-700/30 p-2">
+                                <canvas id="distChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- 4. MONTE CARLO -->
+                        <div id="panel-monte" class="h-full w-full hidden flex flex-col p-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-xs text-pink-400 font-bold uppercase">Monte Carlo Forecast</h3>
+                                        <i class="fas fa-question-circle has-tooltip">
+                                            <div class="tooltip-content">
+                                                <span class="tooltip-title">Monte Carlo Simulation</span>
+                                                การจำลองอนาคต 100 เส้นทาง โดยใช้ค่า Drift (CAGR) และ Volatility ของกลยุทธ์
+                                                <span class="tooltip-formula">Next = Curr * exp((μ - 0.5σ²) + σZ)</span>
+                                                ใช้ประเมินความเสี่ยงและโอกาสที่เป็นไปได้ในอนาคต (Best/Worst Case)
+                                            </div>
+                                        </i>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400">Duration (Years):</span>
+                                        <input id="monteYears" type="number" value="1" min="1" max="5" class="bg-gray-800 border border-gray-600 rounded px-2 py-0.5 text-xs text-center w-12 text-pink-400" onchange="rerunMonte()">
+                                        <button onclick="rerunMonte()" class="text-gray-400 hover:text-white transition" title="Re-Simulate (Relog)">
+                                            <i class="fas fa-sync-alt text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="monteStats" class="text-[10px] font-mono text-gray-300"></div>
+                            </div>
+                            <div id="monteDiv" class="flex-grow w-full bg-black/20 rounded border border-gray-700/30"></div>
+                        </div>
+
+                        <!-- 5. LOGS -->
+                        <div id="panel-logs" class="h-full w-full hidden flex flex-col p-3">
+                             <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-xs text-green-400 font-bold uppercase">Detailed Transaction Logs</h3>
+                                <div class="flex items-center gap-4 text-[10px] text-gray-500 font-mono">
+                                    <span id="logMeta" class="text-gray-400">No Data</span>
+                                    <div class="flex gap-2 items-center">
+                                        <button onclick="changeLogPage(-1)" id="btnPrevLog" class="pagination-btn" disabled><i class="fas fa-chevron-left mr-1"></i> Prev</button>
+                                        <span id="logPageNum" class="text-white font-bold bg-gray-800 px-2 py-1 rounded min-w-[60px] text-center border border-gray-600">1 / 1</span>
+                                        <button onclick="changeLogPage(1)" id="btnNextLog" class="pagination-btn" disabled>Next <i class="fas fa-chevron-right ml-1"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-auto custom-scroll flex-grow bg-black/20 rounded border border-gray-700/50 relative">
+                                <table class="log-table border-collapse">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-24">Date</th>
+                                            <th class="w-20">Type</th>
+                                            <th>Action Detail (Rebalance)</th>
+                                            <th class="w-40">Before (Prev %)</th>
+                                            <th class="w-40">After (New %)</th>
+                                            <th class="text-right w-20">Fee</th>
+                                            <th class="text-right w-24">NAV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logBody" class="text-gray-300">
+                                        <tr><td colspan="7" class="text-center text-gray-500 py-20 italic">Run simulation & click 'VIEW' to see detailed logs here.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM PANEL: RESULTS TABLE -->
+                <div class="glass-panel p-4 rounded-xl flex-grow overflow-hidden flex flex-col min-h-[300px]">
+                    <div class="flex flex-wrap justify-between items-center mb-3 pb-2 border-b border-gray-700">
+                        <h2 class="text-xs font-bold text-gray-300 uppercase"><i class="fas fa-trophy mr-2 text-yellow-500"></i> Leaderboard</h2>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <label class="text-[10px] text-gray-500 uppercase font-bold">Filter:</label>
+                                <select id="strategyFilter" onchange="filterResults()" class="bg-gray-800 border border-gray-600 text-[10px] text-white rounded px-2 py-1 outline-none uppercase font-mono">
+                                    <option value="ALL">Show All</option>
+                                    <option value="Equal">Equal Weight</option>
+                                    <option value="Rank">Rank Momentum</option>
+                                    <option value="Top3">Top 3 Leader</option>
+                                    <option value="Top3Rank">Top 3 Ranked</option>
+                                    <option value="Top50">Top 50% Equal</option>
+                                    <option value="Top50Rank">Top 50% Ranked</option>
+                                    <option value="AbsMom">Absolute Mom</option>
+                                    <option value="MomWeight">Momentum Weighted</option>
+                                    <option value="DualMom">Dual Momentum</option>
+                                    <option value="InvVol">Inverse Vol</option>
+                                    <option value="AAA">Adaptive Aggressive</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-[10px] text-gray-500 uppercase font-bold">Sort:</label>
+                                <select id="sortMetric" onchange="sortResults()" class="bg-gray-800 border border-gray-600 text-[10px] text-white rounded px-2 py-1 outline-none font-mono">
+                                    <option value="Sharpe">Sharpe</option>
+                                    <option value="RobustScore">Robust Score</option>
+                                    <option value="Win30d">Win 30d %</option>
+                                    <option value="CAGR">CAGR</option>
+                                    <option value="MaxDD">Drawdown</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-auto custom-scroll flex-grow">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] text-gray-400 uppercase border-b border-gray-600 sticky top-0 bg-gray-800 z-10 shadow-sm">
+                                    <th class="p-3">Rank</th>
+                                    <th class="p-3">Strategy</th>
+                                    <th class="p-3 text-center">LB/RB</th>
+                                    <th class="p-3 text-right">CAGR</th>
+                                    <th class="p-3 text-right text-yellow-500">Sharpe</th>
+                                    <th class="p-3 text-right text-blue-400">
+                                        Win30d
+                                        <i class="fas fa-question-circle has-tooltip ml-1">
+                                            <div class="tooltip-content">
+                                                <span class="tooltip-title">Win Rate (30 Days)</span>
+                                                เปอร์เซ็นต์ของรอบการลงทุน 30 วันที่มีกำไร
+                                                <span class="tooltip-ex">> 60% = สม่ำเสมอดีมาก</span>
+                                            </div>
+                                        </i>
+                                    </th>
+                                    <th class="p-3 text-right text-green-400">
+                                        R-Score
+                                        <i class="fas fa-question-circle has-tooltip ml-1">
+                                            <div class="tooltip-content">
+                                                <span class="tooltip-title">New Robustness Score</span>
+                                                คะแนนความเสถียรแบบใหม่ (Weighted):
+                                                <br><code>0.6 * Neighbor Stability (Parameter)</code>
+                                                <br><code>+ 0.4 * Time Stability (Rolling Sharpe)</code>
+                                                <span class="tooltip-ex">คำนึงถึงทั้งการปรับจูนพารามิเตอร์ และความสม่ำเสมอของกำไรรายเดือน</span>
+                                            </div>
+                                        </i>
+                                    </th>
+                                    <th class="p-3 text-right">MaxDD</th>
+                                    <th class="p-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody" class="text-xs font-mono text-gray-300">
+                                <tr><td colspan="9" class="p-8 text-center text-gray-500 italic">Configure & Run to see results...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- INFOGRAPHIC MODAL -->
+        <div id="infoModal" class="modal-overlay" onclick="if(event.target === this) toggleModal('infoModal')">
+            <!-- Same Modal Content -->
+            <div class="modal-content">
+                <button onclick="toggleModal('infoModal')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
+                <h2 class="text-2xl font-bold text-yellow-500 mb-2 border-b border-gray-700 pb-4"><i class="fas fa-project-diagram mr-2"></i> System Workflow</h2>
+                <div class="mt-6 p-4">
+                    <div class="info-step"><div class="step-icon"><i class="fas fa-cloud-download-alt"></i></div><div class="step-content"><h3 class="text-lg font-bold text-yellow-500 mb-1">1. Data Ingestion</h3><p class="text-gray-400 text-sm">ระบบเชื่อมต่อกับ <strong>Binance API</strong> เพื่อดึงข้อมูลราคาปิดรายวัน...</p></div></div>
+                    <div class="info-step"><div class="step-icon"><i class="fas fa-border-all"></i></div><div class="step-content"><h3 class="text-lg font-bold text-blue-400 mb-1">2. Grid Generation</h3><p class="text-gray-400 text-sm">สร้างตารางทดสอบ (Grid Search) จาก Strategy x Lookback x Rebalance...</p></div></div>
+                    <div class="info-step"><div class="step-icon"><i class="fas fa-cogs"></i></div><div class="step-content"><h3 class="text-lg font-bold text-green-400 mb-3">3. Backtest Execution</h3><p class="text-gray-400 text-sm mb-4">จำลองการซื้อขายด้วยกลยุทธ์ต่างๆ ดังนี้:</p><div class="strat-grid">
+                        <div class="strat-card"><div class="strat-name">1. Equal Weight</div><span class="strat-formula">\( W_i = 1 / N \)</span><div class="strat-ex">ซื้อทุกตัวเท่ากัน</div></div>
+                        <div class="strat-card"><div class="strat-name">2. Rank (Momentum Score)</div><span class="strat-formula">\( W_i = Score_i / \sum Score \)</span><div class="strat-ex">ถ่วงน้ำหนักตามลำดับคะแนน</div></div>
+                        <div class="strat-card"><div class="strat-name">3. Top 3 Leader</div><span class="strat-formula">\( W_i = 1/3 \) (Top 3 Only)</span><div class="strat-ex">3 ตัวแรก ซื้อเท่ากัน</div></div>
+                        <div class="strat-card"><div class="strat-name">4. Top 3 Ranked</div><span class="strat-formula">Weighted Rank (Top 3)</span><div class="strat-ex">3 ตัวแรก ถ่วงน้ำหนักตามอันดับ</div></div>
+                        <div class="strat-card"><div class="strat-name">5. Top 50% Equal</div><span class="strat-formula">Select Top N/2 (Equal)</span><div class="strat-ex">คัดมาครึ่งบน ลงทุนเท่ากัน</div></div>
+                        <div class="strat-card"><div class="strat-name">6. Top 50% Ranked (New!)</div><span class="strat-formula">Select Top N/2 (Rank Weighted)</span><div class="strat-ex">คัดครึ่งบน แล้วถ่วงน้ำหนักตามอันดับ</div></div>
+                        <div class="strat-card"><div class="strat-name">7. Absolute Momentum</div><span class="strat-formula">If Return > 0: Buy</span><div class="strat-ex">ซื้อเฉพาะตัวขาขึ้น</div></div>
+                        <div class="strat-card"><div class="strat-name">8. Momentum Weighted (New!)</div><span class="strat-formula">\( W_i \propto Return_i \)</span><div class="strat-ex">ถ่วงน้ำหนักตามความแรงของกราฟจริง (Proportional)</div></div>
+                        <div class="strat-card"><div class="strat-name">9. Dual Momentum</div><span class="strat-formula">Top 3 AND Return > 0</span><div class="strat-ex">ต้องติด Top 3 และเป็นขาขึ้น</div></div>
+                        <div class="strat-card"><div class="strat-name">10. Inverse Volatility</div><span class="strat-formula">\( W_i \propto 1 / Vol_i \)</span><div class="strat-ex">ตัวนิ่งลงเยอะ ตัวซิ่งลงน้อย</div></div>
+                        <div class="strat-card"><div class="strat-name">11. Adaptive Aggressive</div><span class="strat-formula">Pos Trend \(\rightarrow\) InvVol</span><div class="strat-ex">ขาขึ้นเท่านั้น แล้วเกลี่ยตามความนิ่ง</div></div>
+                    </div></div></div>
+                    <div class="info-step"><div class="step-icon"><i class="fas fa-chart-line"></i></div><div class="step-content"><h3 class="text-lg font-bold text-purple-400 mb-1">4. Scoring & Robustness</h3><p class="text-gray-400 text-sm">คำนวณ R-Score จากเพื่อนบ้าน...</p></div></div>
+                    <div class="info-step"><div class="step-icon"><i class="fas fa-poll"></i></div><div class="step-content"><h3 class="text-lg font-bold text-pink-400 mb-1">5. Visualization</h3><p class="text-gray-400 text-sm">แสดงผล Leaderboard, 3D Grid, Monte Carlo...</p></div></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // UI HELPERS
+        // ==========================================
+        function toggleModal(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'flex') ? 'none' : 'flex'; }
+        
+        function setTab(tabName) {
+            ['chart', 'landscape', 'dist', 'monte', 'logs'].forEach(t => {
+                document.getElementById('panel-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('tab-active');
+                document.getElementById('tab-' + t).classList.add('tab-inactive');
+            });
+            document.getElementById('panel-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.add('tab-active');
+            document.getElementById('tab-' + tabName).classList.remove('tab-inactive');
+            if(tabName === 'landscape') Plotly.Plots.resize('landscapeDiv');
+            if(tabName === 'monte') Plotly.Plots.resize('monteDiv');
+        }
+
+        const log = (msg) => {
+            const box = document.getElementById('statusBox');
+            box.innerHTML = `<div>> ${msg}</div>` + box.innerHTML;
+        };
+
+        // ==========================================
+        // CONFIG & STATE
+        // ==========================================
+        const QUOTE = "USDT";
+        const TIMEFRAME = "1d";
+        const LIMIT = 1000;
+        // Expanded Strategy List
+        const STRATEGIES = ["Equal","Rank","Top3","Top3Rank","Top50","Top50Rank","AbsMom","MomWeight","DualMom","InvVol","AAA"];
+        
+        let marketData = {}; 
+        let alignedPrices = []; 
+        let alignedReturns = []; 
+        let assetList = [];
+        let simulationResults = [];
+        let benchmarkData = [];
+        let benchMetrics = {};
+        
+        let chartInstance = null;
+        let ddChartInstance = null;
+        let distChartInstance = null;
+        let selectedResultIndex = -1;
+        let currentLogs = [];
+        let currentLogPage = 1;
+        const LOGS_PER_PAGE = 50; // Increased to 50 for better scrolling experience
+
+        // ==========================================
+        // DATA & LOGIC
+        // ==========================================
+        
+        // --- ROBUST DATA FETCHING (AUTO-MOCK) ---
+        function generateMockData(symbol, days=1000) {
+            let prices = [];
+            // Random start price based on symbol hash to look different
+            const hash = symbol.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+            let price = 50 + (hash % 900); 
+            let date = new Date();
+            date.setDate(date.getDate() - days);
+
+            // Random walk parameters
+            const vol = 0.02 + (hash % 10)/500; // 2-4% daily vol
+            const drift = 0.0006; // Slight upward bias
+
+            for(let i=0; i<days; i++) {
+                // Brownion motion
+                const u1 = Math.random();
+                const u2 = Math.random();
+                const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                
+                const move = drift + (vol * z);
+                price = price * Math.exp(move);
+                
+                prices.push({
+                    time: date.getTime(),
+                    close: price
+                });
+                date.setDate(date.getDate() + 1);
+            }
+            return prices;
+        }
+
+        async function fetchBinanceData(symbol) {
+            // Attempt to fetch from Binance
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout for fast fallback
+                
+                const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}${QUOTE}&interval=${TIMEFRAME}&limit=${LIMIT}`;
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if(!res.ok) throw new Error("API status " + res.status);
+                
+                const data = await res.json();
+                return data.map(d => ({ time: d[0], close: parseFloat(d[4]) }));
+            } catch (e) {
+                // FALLBACK TO MOCK DATA
+                log(`<span class="text-yellow-500">API Blocked (${symbol}). Generating Mock Data...</span>`);
+                return generateMockData(symbol);
+            }
+        }
+
+        function alignData(rawMap, symbols) {
+            let allDates = new Set();
+            symbols.forEach(s => { if(rawMap[s]) rawMap[s].forEach(p => allDates.add(p.time)); });
+            const sortedDates = Array.from(allDates).sort((a,b) => a - b);
+            const priceMatrix = [];
+            const lastVals = {};
+            symbols.forEach(s => lastVals[s] = null);
+            sortedDates.forEach(t => {
+                const row = { time: t };
+                let complete = true;
+                symbols.forEach(s => {
+                    // Find exact match or use last known (Forward Fill)
+                    let pt = rawMap[s] ? rawMap[s].find(x => Math.abs(x.time - t) < 3600000) : null;
+                    if(!pt && rawMap[s]) {
+                        // fallback to finding closest previous
+                        // simplified: just use lastVals
+                    } else if (pt) {
+                        lastVals[s] = pt.close;
+                    }
+
+                    if(lastVals[s] !== null) { row[s] = lastVals[s]; } else { complete = false; }
+                });
+                if(complete) priceMatrix.push(row);
+            });
+            return priceMatrix;
+        }
+
+        function computeReturns(priceData, assets) {
+            const returns = [];
+            for(let i=0; i<priceData.length-1; i++) {
+                const row = { time: priceData[i].time };
+                assets.forEach(a => { row[a] = (priceData[i+1][a] - priceData[i][a]) / priceData[i][a]; });
+                returns.push(row);
+            }
+            return returns;
+        }
+
+        // --- STRATEGY WEIGHTS (UPDATED) ---
+        function getWeights(strategy, assets, currentPrices, lookbackPrices, returnsSlice) {
+            let weights = {};
+            assets.forEach(a => weights[a] = 0);
+            const signals = assets.map(a => ({ asset: a, mom: (currentPrices[a] / lookbackPrices[a]) - 1, vol: 0 }));
+            if(["InvVol", "AAA"].includes(strategy)) {
+                assets.forEach((a, idx) => {
+                    const r = returnsSlice.map(x => x[a]);
+                    const mean = r.reduce((s,v)=>s+v,0)/r.length;
+                    signals[idx].vol = Math.sqrt(r.reduce((s,v)=>s+Math.pow(v-mean,2),0)/(r.length-1)) || 0.01;
+                });
+            }
+            
+            // Sort Descending Momentum
+            signals.sort((a,b) => b.mom - a.mom);
+            const n = assets.length;
+
+            if(strategy === "Equal") assets.forEach(a => weights[a] = 1/n);
+            else if(strategy === "Rank") { const S = n*(n+1)/2; signals.forEach((s,i) => weights[s.asset] = (n-i)/S); }
+            else if(strategy === "Top3") signals.slice(0,3).forEach(s => weights[s.asset] = 1/3);
+            else if(strategy === "Top3Rank") { const S = 6; signals.slice(0,3).forEach((s,i) => weights[s.asset] = (3-i)/S); }
+            else if(strategy === "Top50") { const k = Math.ceil(n/2); signals.slice(0,k).forEach(s => weights[s.asset] = 1/k); }
+            
+            // NEW STRATEGIES
+            else if(strategy === "Top50Rank") { 
+                const k = Math.ceil(n/2); 
+                const S = k*(k+1)/2; 
+                signals.slice(0,k).forEach((s,i) => weights[s.asset] = (k-i)/S); 
+            }
+            else if(strategy === "MomWeight") {
+                const pos = signals.filter(s=>s.mom>0);
+                const sumMom = pos.reduce((sum, s) => sum + s.mom, 0);
+                if(pos.length > 0 && sumMom > 0) {
+                    pos.forEach(s => weights[s.asset] = s.mom / sumMom);
+                }
+            }
+
+            else if(strategy === "AbsMom") { const pos = signals.filter(s=>s.mom>0); if(pos.length) pos.forEach(s => weights[s.asset] = 1/pos.length); }
+            else if(strategy === "DualMom") { const pos = signals.filter(s=>s.mom>0).slice(0,3); if(pos.length) pos.forEach(s => weights[s.asset] = 1/pos.length); }
+            else if(strategy === "InvVol") { let sum=0; signals.forEach(s=>{sum+=1/s.vol}); signals.forEach(s=>weights[s.asset]=(1/s.vol)/sum); }
+            else if(strategy === "AAA") { 
+                let pos = signals.filter(s=>s.mom>0); if(pos.length===0) pos=signals.slice(0,3);
+                let sum=0; pos.forEach(s=>{sum+=1/s.vol}); pos.forEach(s=>weights[s.asset]=(1/s.vol)/sum);
+            }
+            return weights;
+        }
+
+        // --- BACKTEST (UPDATED FOR LOGS) ---
+        function runBacktest(strategy, lb, rb, initialCapital, feeRate, verbose=false) {
+            const startIdx = lb + 1;
+            let nav = initialCapital;
+            let currentWeights = {};
+            assetList.forEach(a => currentWeights[a] = 0);
+            
+            const initToday = alignedPrices[startIdx-1];
+            const initPrev = alignedPrices[startIdx-1-lb];
+            const initRet = alignedReturns.slice(Math.max(0, startIdx-1-lb), startIdx-1);
+            currentWeights = getWeights(strategy, assetList, initToday, initPrev, initRet);
+            
+            let turnover = 0;
+            assetList.forEach(a => turnover += currentWeights[a]);
+            nav -= nav * turnover * feeRate;
+
+            let equityCurve = [{ time: initToday.time, nav: nav }];
+            let logs = [];
+
+            for(let t = startIdx-1; t < alignedReturns.length; t++) {
+                const retRow = alignedReturns[t];
+                let portRet = 0;
+                assetList.forEach(a => portRet += currentWeights[a] * retRow[a]);
+                nav = nav * (1 + portRet);
+
+                const currentTime = alignedPrices[t+1].time;
+                equityCurve.push({ time: currentTime, nav: nav });
+
+                const priceIdx = t + 1;
+                const simTime = priceIdx - (startIdx - 1);
+
+                if(simTime % rb === 0 && priceIdx < alignedPrices.length - 1) {
+                    const todayPrice = alignedPrices[priceIdx];
+                    const prevPrice = alignedPrices[priceIdx - lb];
+                    const retSlice = alignedReturns.slice(Math.max(0, priceIdx - lb), priceIdx);
+                    const newWeights = getWeights(strategy, assetList, todayPrice, prevPrice, retSlice);
+
+                    let turnover = 0;
+                    let diffs = [];
+                    // For logs: deep copy weights
+                    const prevW = {...currentWeights};
+                    const nextW = {...newWeights};
+
+                    assetList.forEach(a => {
+                        const diff = newWeights[a] - currentWeights[a];
+                        turnover += Math.abs(diff);
+                        if(Math.abs(diff) > 0.001) diffs.push({ asset: a, diff: diff });
+                    });
+                    
+                    const fee = nav * turnover * feeRate;
+                    nav -= fee;
+
+                    if(verbose && diffs.length > 0) {
+                        const dateStr = new Date(currentTime).toLocaleDateString();
+                        const details = diffs.map(d => `<span class="${d.diff>0?'log-buy':'log-sell'}">${d.diff>0?'Buy':'Sell'} ${d.asset} ${(Math.abs(d.diff)*100).toFixed(0)}%</span>`).join(" ");
+                        
+                        // Push full state to logs
+                        logs.push({ 
+                            date: dateStr, 
+                            type: 'Rebal', 
+                            details, 
+                            fee, 
+                            nav,
+                            prevW,
+                            nextW
+                        });
+                    }
+                    currentWeights = newWeights;
+                }
+            }
+            return { curve: equityCurve, logs: logs.reverse() }; // Latest first
+        }
+
+        // --- METRICS WITH ROLLING WINDOW & MONTHLY STATS ---
+        function calcMetrics(curve) {
+            if(curve.length < 60) return null; // Need enough data for rolling
+            const vals = curve.map(e => e.nav);
+            const rets = [];
+            for(let i=1; i<vals.length; i++) rets.push((vals[i]-vals[i-1])/vals[i-1]);
+
+            // General
+            const days = rets.length;
+            const mean = rets.reduce((a,b)=>a+b,0)/days;
+            const variance = rets.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(days-1);
+            const std = Math.sqrt(variance);
+            const annVol = std * Math.sqrt(365);
+            const cagr = Math.pow(vals[days]/vals[0], 365/days) - 1;
+            const sharpe = annVol===0?0:(cagr - 0.02)/annVol;
+            const totalRet = (vals[days]/vals[0] - 1) * 100;
+            
+            // Drawdown
+            let peak = vals[0], maxDD = 0;
+            vals.forEach(v => { if(v>peak) peak=v; const d=(v-peak)/peak; if(d<maxDD) maxDD=d; });
+
+            // Monthly Stats (Keep existing)
+            const monthEnds = {};
+            curve.forEach(p => {
+                const d = new Date(p.time);
+                const k = `${d.getFullYear()}-${d.getMonth()}`;
+                monthEnds[k] = p.nav;
+            });
+            const mNavs = Object.values(monthEnds);
+            const mRets = [];
+            for(let i=1; i<mNavs.length; i++) mRets.push((mNavs[i]-mNavs[i-1])/mNavs[i-1]);
+            const avgMonth = mRets.length ? (mRets.reduce((a,b)=>a+b,0)/mRets.length) * 100 : 0;
+            const worstMonth = mRets.length ? Math.min(...mRets) * 100 : 0;
+
+            // --- NEW: ROLLING 30-DAY WINDOW ANALYSIS ---
+            const rollPeriod = 30;
+            const rollRets = [];
+            for(let i=rollPeriod; i<vals.length; i++) {
+                // Return over the last 30 days window
+                rollRets.push( (vals[i] - vals[i-rollPeriod])/vals[i-rollPeriod] );
+            }
+            const avgRoll = rollRets.length ? rollRets.reduce((a,b)=>a+b,0)/rollRets.length : 0;
+            const stdRoll = rollRets.length ? Math.sqrt(rollRets.reduce((a,b)=>a+Math.pow(b-avgRoll,2),0)/(rollRets.length-1)) : 0;
+            // Annualize Rolling Sharpe (Assuming 12 periods of 30 days approx in a year)
+            const rollSharpe = stdRoll > 0 ? (avgRoll / stdRoll) * Math.sqrt(12) : 0;
+            const rollWin = rollRets.filter(r=>r>0).length / (rollRets.length||1);
+
+            return { 
+                CAGR: cagr*100, 
+                TotalRet: totalRet,
+                Sharpe: sharpe, 
+                MaxDD: maxDD*100, 
+                Vol: annVol*100,
+                AvgMonth: avgMonth,
+                WorstMonth: worstMonth,
+                // New Metrics
+                AvgRoll: avgRoll * 100,
+                Win30d: rollWin * 100, // FIX: Renamed back to Win30d to match UI usage
+                RollSharpe: rollSharpe
+            };
+        }
+
+        // --- ROBUSTNESS (UPDATED LOGIC) ---
+        function calculateRobustness(results) {
+            const grid = {};
+            // 1. Build Grid for Neighbor Lookup
+            results.forEach(r => {
+                if(!grid[r.s]) grid[r.s] = {};
+                if(!grid[r.s][r.lb]) grid[r.s][r.lb] = {};
+                grid[r.s][r.lb][r.rb] = r.Sharpe;
+            });
+
+            // 2. Calculate Component Scores
+            results.forEach(r => {
+                // A. Parameter Stability (Neighbor Score)
+                const lbStep = parseInt(document.getElementById('lbStep').value);
+                const rbStep = parseInt(document.getElementById('rbStep').value);
+                let sum = 0, count = 0;
+                for(let i = -1; i <= 1; i++) {
+                    for(let j = -1; j <= 1; j++) {
+                        const nLB = r.lb + (i * lbStep);
+                        const nRB = r.rb + (j * rbStep);
+                        if(grid[r.s] && grid[r.s][nLB] && grid[r.s][nLB][nRB] !== undefined) {
+                            sum += grid[r.s][nLB][nRB]; count++;
+                        }
+                    }
+                }
+                const paramScore = count > 0 ? sum / count : r.Sharpe;
+
+                // B. Time Stability (Rolling Sharpe)
+                // We use the 30-day Rolling Sharpe calculated in calcMetrics
+                const timeScore = r.RollSharpe;
+
+                // C. Weighted Composite Score
+                // 60% Param Stability + 40% Time Stability
+                r.RobustScore = (paramScore * 0.6) + (timeScore * 0.4);
+            });
+        }
+
+        // --- PIPELINE ---
+        async function runPipeline() {
+            const btn = document.getElementById('fetchBtn');
+            const univ = document.getElementById('universeInput').value.split(',').map(s=>s.trim().toUpperCase());
+            const benchSym = document.getElementById('benchmarkInput').value.trim().toUpperCase();
+            if(univ.length < 2) return alert("Enter 2+ assets");
+            
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-cog fa-spin"></i> Processing...';
+            document.getElementById('statusBox').innerHTML = "";
+
+            log("Fetching Data...");
+            marketData = {};
+            const allSyms = [...new Set([...univ, benchSym])];
+            const promises = allSyms.map(async s => {
+                const d = await fetchBinanceData(s);
+                if(d && d.length>100) marketData[s] = d;
+            });
+            await Promise.all(promises);
+            
+            // Filter only assets that returned data (real or mock)
+            assetList = univ.filter(s => marketData[s] && marketData[s].length > 0); 
+            if(assetList.length===0 || !marketData[benchSym]) { 
+                btn.disabled=false; 
+                btn.innerHTML = '<i class="fas fa-play"></i> Start Simulation';
+                return alert("Critical Error: No data available (even Mock generation failed)."); 
+            }
+
+            log("Aligning Data...");
+            alignedPrices = alignData(marketData, assetList);
+            alignedReturns = computeReturns(alignedPrices, assetList);
+            
+            const benchRaw = alignData(marketData, [benchSym]);
+            // Safety check for empty bench
+            if(benchRaw.length === 0) {
+                 btn.disabled=false; 
+                 return alert("Benchmark Data Missing");
+            }
+
+            const capital = parseFloat(document.getElementById('capital').value);
+            const bCurve = benchRaw.map(x => ({ time: x.time, nav: x[benchSym] / benchRaw[0][benchSym] * capital }));
+            
+            // FIX: Handle benchMetrics properly
+            benchMetrics = calcMetrics(bCurve);
+            if (!benchMetrics) {
+                // Fallback to prevent crash if benchmark history is too short
+                benchMetrics = { CAGR:0, TotalRet:0, Sharpe:0, MaxDD:0, Vol:0, AvgMonth:0, WorstMonth:0, AvgRoll:0, Win30d:0, RollSharpe:0 };
+            }
+            benchmarkData = bCurve;
+
+            const d1 = new Date(alignedPrices[0].time).toLocaleDateString();
+            const d2 = new Date(alignedPrices[alignedPrices.length-1].time).toLocaleDateString();
+            document.getElementById('dateRangeDisplay').innerText = `${d1} - ${d2} (${alignedPrices.length} Days)`;
+
+            const tasks = [];
+            const lbS=parseInt(document.getElementById('lbStart').value), lbE=parseInt(document.getElementById('lbEnd').value), lbStep=parseInt(document.getElementById('lbStep').value);
+            const rbS=parseInt(document.getElementById('rbStart').value), rbE=parseInt(document.getElementById('rbEnd').value), rbStep=parseInt(document.getElementById('rbStep').value);
+            const fee = parseFloat(document.getElementById('fee').value)/100;
+
+            STRATEGIES.forEach(s => {
+                for(let lb=lbS; lb<=lbE; lb+=lbStep) {
+                    for(let rb=rbS; rb<=rbE; rb+=rbStep) tasks.push({s,lb,rb});
+                }
+            });
+
+            log(`Queued ${tasks.length} Sims...`);
+            simulationResults = [];
+            let completed = 0, CHUNK = 50;
+
+            function process() {
+                const end = Math.min(completed+CHUNK, tasks.length);
+                for(let i=completed; i<end; i++) {
+                    const t = tasks[i];
+                    if(t.lb < alignedPrices.length - 20) {
+                        const res = runBacktest(t.s, t.lb, t.rb, capital, fee, false);
+                        const m = calcMetrics(res.curve);
+                        if(m) simulationResults.push({ ...t, ...m, curve: res.curve });
+                    }
+                }
+                completed = end;
+                document.getElementById('progressBar').style.width = `${(completed/tasks.length)*100}%`;
+                document.getElementById('simCount').innerText = `${completed}/${tasks.length}`;
+                if(completed < tasks.length) setTimeout(process, 0);
+                else finish();
+            }
+            setTimeout(process, 50);
+        }
+
+        function finish() {
+            log("Calculating Robustness...");
+            calculateRobustness(simulationResults);
+            simulationResults.sort((a,b) => b.Sharpe - a.Sharpe);
+            
+            document.getElementById('fetchBtn').disabled = false;
+            document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-play"></i> Run Again';
+            log("Complete.");
+            filterResults();
+            if(simulationResults.length > 0) viewResult(0);
+        }
+
+        // --- VISUALIZATION ---
+        function filterResults() {
+            const strat = document.getElementById('strategyFilter').value;
+            const sortM = document.getElementById('sortMetric').value;
+            let filtered = strat === "ALL" ? simulationResults : simulationResults.filter(r => r.s === strat);
+            if(sortM === 'MaxDD') filtered.sort((a,b) => a.MaxDD - b.MaxDD);
+            else filtered.sort((a,b) => b[sortM] - a[sortM]);
+
+            const top = filtered.slice(0, 100);
+            const tbody = document.getElementById('resultsBody');
+            
+            // Safety check before mapping
+            if (!benchMetrics) {
+                 tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-red-500">Error: Benchmark metrics unavailable.</td></tr>`;
+                 return;
+            }
+
+            tbody.innerHTML = top.map((r,i) => {
+                const benchDiff = (r.CAGR - (benchMetrics.CAGR || 0)).toFixed(1);
+                const color = benchDiff >= 0 ? 'text-green-400' : 'text-red-400';
+                return `
+                <tr class="hover:bg-gray-800 transition border-b border-gray-800 cursor-pointer" onclick="viewResult(${simulationResults.indexOf(r)})">
+                    <td class="p-3 text-gray-500 font-mono">#${i+1}</td>
+                    <td class="p-3 font-bold text-blue-400">${r.s}</td>
+                    <td class="p-3 text-center text-gray-400">${r.lb} / ${r.rb}</td>
+                    <td class="p-3 text-right ${r.CAGR>=0?'text-green-400':'text-red-400'}">${r.CAGR.toFixed(1)}%</td>
+                    <td class="p-3 text-right font-bold text-yellow-500">${r.Sharpe.toFixed(2)}</td>
+                    <td class="p-3 text-right text-blue-400 font-bold">${(r.Win30d !== undefined ? r.Win30d : 0).toFixed(0)}%</td>
+                    <td class="p-3 text-right text-green-400 font-bold">${r.RobustScore.toFixed(2)}</td>
+                    <td class="p-3 text-right text-red-400">${r.MaxDD.toFixed(1)}%</td>
+                    <td class="p-3 text-center ${color}">${benchDiff > 0 ? '+' : ''}${benchDiff}%</td>
+                    <td class="p-3 text-center"><button class="text-[9px] bg-gray-700 px-2 py-1 rounded">VIEW</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function sortResults() { filterResults(); }
+
+        function viewResult(idx) {
+            selectedResultIndex = idx;
+            const res = simulationResults[idx];
+            if(!res) return;
+
+            // Updated KPI Bar with Monthly Stats
+            const kpi = document.getElementById('kpiBar');
+            kpi.innerHTML = `
+                <div class="metric-card"><div class="metric-val text-yellow-500">${res.Sharpe.toFixed(2)}</div><div class="metric-label">Sharpe</div><div class="bench-val">B: ${benchMetrics.Sharpe.toFixed(2)}</div></div>
+                <div class="metric-card"><div class="metric-val ${res.Win30d>=50?'metric-pos':'metric-neg'}">${res.Win30d.toFixed(0)}%</div><div class="metric-label">Win30d</div><div class="bench-val">B: ${benchMetrics.Win30d.toFixed(0)}%</div></div>
+                <div class="metric-card"><div class="metric-val ${res.CAGR>=0?'metric-pos':'metric-neg'}">${res.CAGR.toFixed(1)}%</div><div class="metric-label">CAGR</div><div class="bench-val">B: ${benchMetrics.CAGR.toFixed(1)}%</div></div>
+                <div class="metric-card"><div class="metric-val metric-neg">${res.MaxDD.toFixed(1)}%</div><div class="metric-label">MaxDD</div><div class="bench-val">B: ${benchMetrics.MaxDD.toFixed(1)}%</div></div>
+                <div class="metric-card"><div class="metric-val metric-vol">${res.Vol.toFixed(1)}%</div><div class="metric-label">Volatility</div><div class="bench-val">B: ${benchMetrics.Vol.toFixed(1)}%</div></div>
+                <div class="metric-card"><div class="metric-val ${res.AvgRoll>=0?'metric-pos':'metric-neg'}">${res.AvgRoll.toFixed(1)}%</div><div class="metric-label">Roll Avg</div><div class="bench-val">B: ${benchMetrics.AvgRoll.toFixed(1)}%</div></div>
+                <div class="metric-card"><div class="metric-val metric-neg">${res.WorstMonth.toFixed(1)}%</div><div class="metric-label">Worst M</div><div class="bench-val">B: ${benchMetrics.WorstMonth.toFixed(1)}%</div></div>
+            `;
+            document.getElementById('chartLabel').innerText = `${res.s} (LB:${res.lb} RB:${res.rb}) | R-Score: ${res.RobustScore.toFixed(2)} (Win30d: ${res.Win30d.toFixed(0)}%)`;
+
+            const cap = parseFloat(document.getElementById('capital').value);
+            const fee = parseFloat(document.getElementById('fee').value)/100;
+            const detailed = runBacktest(res.s, res.lb, res.rb, cap, fee, true);
+
+            renderChart(detailed.curve, res.s); 
+            renderLandscape(res.s);
+            renderDistribution();
+            runMonteCarlo(res);
+            
+            // Set logs and render page 1
+            currentLogs = detailed.logs;
+            currentLogPage = 1;
+            renderLogPage();
+        }
+
+        function renderChart(curve, stratName) {
+            // Equity
+            const ctx1 = document.getElementById('equityChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            const benchData = benchmarkData.slice(0, curve.length).map(d => d.nav);
+            
+            chartInstance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: curve.map(p => new Date(p.time).toLocaleDateString()),
+                    datasets: [
+                        { label: stratName, data: curve.map(p => p.nav), borderColor: '#EAB308', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderWidth: 2, fill: true, pointRadius: 0 },
+                        { label: document.getElementById('benchmarkInput').value, data: benchData, borderColor: '#6b7280', borderWidth: 1, borderDash: [4,4], fill: false, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: { legend: { display: true, labels: { color: '#9ca3af' } } },
+                    scales: { x: { display: false }, y: { grid: { color: '#374151' }, ticks: { color: '#9CA3AF' } } }
+                }
+            });
+
+            // Drawdown
+            const ctx2 = document.getElementById('drawdownChart').getContext('2d');
+            if(ddChartInstance) ddChartInstance.destroy();
+            
+            let peak = curve[0].nav;
+            const ddData = curve.map(p => {
+                if(p.nav > peak) peak = p.nav;
+                return ((p.nav - peak) / peak) * 100;
+            });
+
+            ddChartInstance = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: curve.map(p => new Date(p.time).toLocaleDateString()),
+                    datasets: [{ data: ddData, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 1, fill: true, pointRadius: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y.toFixed(2) + '%' } } },
+                    scales: { x: { display: false }, y: { grid: { color: '#374151' }, ticks: { color: '#ef4444', callback: v => v+'%' } } }
+                }
+            });
+        }
+
+        // --- RENDER LOGS WITH PAGINATION & ALLOCATION ---
+        function renderLogPage() {
+            const b = document.getElementById('logBody');
+            const total = currentLogs.length;
+            const totalPages = Math.ceil(total / LOGS_PER_PAGE) || 1;
+            const start = (currentLogPage - 1) * LOGS_PER_PAGE;
+            const end = start + LOGS_PER_PAGE;
+            const slice = currentLogs.slice(start, end);
+            
+            document.getElementById('logMeta').innerText = `${total} Trades`;
+            document.getElementById('logPageNum').innerText = `${currentLogPage} / ${totalPages}`;
+            document.getElementById('btnPrevLog').disabled = currentLogPage === 1;
+            document.getElementById('btnNextLog').disabled = end >= total;
+
+            const formatAlloc = (w) => {
+                if(!w) return "-";
+                return Object.entries(w)
+                    .filter(([k, v]) => v > 0.01)
+                    .map(([k, v]) => `<span class="alloc-tag">${k}:${(v*100).toFixed(0)}%</span>`)
+                    .join(" ");
+            };
+
+            b.innerHTML = slice.map(l => `
+                <tr class="hover:bg-gray-800/50 border-b border-gray-800">
+                    <td>${l.date}</td>
+                    <td class="font-bold text-blue-400">${l.type}</td>
+                    <td>${l.details}</td>
+                    <td class="log-alloc">${formatAlloc(l.prevW)}</td>
+                    <td class="log-alloc">${formatAlloc(l.nextW)}</td>
+                    <td class="text-right text-red-400">-${l.fee.toFixed(2)}</td>
+                    <td class="text-right font-mono text-yellow-500">${l.nav.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                </tr>
+            `).join('');
+        }
+
+        function changeLogPage(delta) {
+            currentLogPage += delta;
+            renderLogPage();
+        }
+
+        // ... (Other Visualization functions remain unchanged) ...
+        function renderLandscape(stratName) {
+            if(!stratName) { const rows = document.querySelectorAll('#resultsBody tr'); if(rows.length > 0) stratName = rows[0].cells[1].innerText; }
+            const metric = document.getElementById('landscapeMetric').value;
+            const subset = simulationResults.filter(r => r.s === stratName);
+            const lbs = [...new Set(subset.map(r => r.lb))].sort((a,b)=>a-b);
+            const rbs = [...new Set(subset.map(r => r.rb))].sort((a,b)=>a-b);
+            const zData = rbs.map(r => lbs.map(l => { const f = subset.find(x => x.lb === l && x.rb === r); return f ? f[metric] : null; }));
+            const data = [{ z: zData, x: lbs, y: rbs, type: 'surface', colorscale: 'Viridis', showscale: false }];
+            Plotly.newPlot('landscapeDiv', data, { title: { text: `${stratName} - ${metric}`, font: { color: '#d1d5db' } }, margin: { l:0,r:0,b:0,t:30 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', scene: { xaxis: {title:'Lookback',color:'#9ca3af'}, yaxis: {title:'Rebalance',color:'#9ca3af'}, zaxis: {title:metric,color:'#9ca3af'} } }, {displayModeBar: false});
+        }
+
+        function renderDistribution() {
+            const metric = document.getElementById('distMetric').value;
+            const values = simulationResults.map(r => r[metric]).filter(v => isFinite(v));
+            const mean = values.reduce((a,b)=>a+b,0)/values.length;
+            const sd = Math.sqrt(values.reduce((a,b)=>a+Math.pow(b-mean,2),0)/values.length);
+            const min = Math.min(...values), max = Math.max(...values);
+            const bins = 35; const step = (max - min) / bins || 1; 
+            const hist = new Array(bins).fill(0); const labels = [];
+            values.forEach(v => hist[Math.min(Math.floor((v-min)/step), bins-1)]++);
+            for(let i=0; i<bins; i++) labels.push((min + i*step).toFixed(2));
+            const getIndex = (val) => Math.max(0, Math.min(bins - 1, (val - min) / step));
+            const ctx = document.getElementById('distChart').getContext('2d');
+            if(distChartInstance) distChartInstance.destroy();
+            distChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Frequency', data: hist, backgroundColor: '#60a5fa', barPercentage: 1.0, categoryPercentage: 1.0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, annotation: { annotations: { lineMean: { type: 'line', scaleID: 'x', value: getIndex(mean), borderColor: 'white', borderWidth: 2 }, box1SD: { type: 'box', xMin: getIndex(mean-sd), xMax: getIndex(mean+sd), backgroundColor: 'rgba(34, 197, 94, 0.2)', borderWidth: 0 }, box2SD: { type: 'box', xMin: getIndex(mean-2*sd), xMax: getIndex(mean+2*sd), backgroundColor: 'rgba(234, 179, 8, 0.15)', borderWidth: 0 }, box3SD: { type: 'box', xMin: getIndex(mean-3*sd), xMax: getIndex(mean+3*sd), backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 0 } } } }, scales: { x: { display: true, ticks: { color: '#9CA3AF', maxTicksLimit: 10, autoSkip: true } }, y: { display: false } } }
+            });
+        }
+
+        function rerunMonte() { if(selectedResultIndex >= 0) runMonteCarlo(simulationResults[selectedResultIndex]); }
+        function runMonteCarlo(res) {
+            const years = parseFloat(document.getElementById('monteYears').value) || 1;
+            const mu = (res.CAGR/100)/365;
+            const sigma = (res.Vol/100)/Math.sqrt(365);
+            const sims = 100; const days = Math.floor(365 * years);
+            const paths = []; const lastNav = res.curve[res.curve.length-1].nav;
+            const endValues = [], simMaxDDs = [], simVols = [];
+            for(let s=0; s<sims; s++) {
+                let path = [lastNav], price = lastNav, peak = lastNav, maxDD = 0, rets = [];
+                for(let d=0; d<days; d++) {
+                    const shock = Math.sqrt(-2*Math.log(Math.random())) * Math.cos(2*Math.PI*Math.random());
+                    const nextPrice = price * Math.exp((mu - 0.5*sigma*sigma) + sigma*shock);
+                    rets.push((nextPrice-price)/price);
+                    if(nextPrice > peak) peak = nextPrice;
+                    const dd = (nextPrice - peak) / peak;
+                    if(dd < maxDD) maxDD = dd;
+                    price = nextPrice; path.push(price);
+                }
+                const meanRet = rets.reduce((a,b)=>a+b,0)/rets.length;
+                const variance = rets.reduce((a,b)=>a+Math.pow(b-meanRet,2),0)/(rets.length-1);
+                paths.push({ y: path, type: 'scatter', mode: 'lines', line: {color: 'rgba(236, 72, 153, 0.05)', width: 1}, hoverinfo: 'none' });
+                endValues.push(price); simMaxDDs.push(maxDD); simVols.push(Math.sqrt(variance)*Math.sqrt(365));
+            }
+            endValues.sort((a,b)=>a-b); simMaxDDs.sort((a,b)=>a-b); simVols.sort((a,b)=>a-b);
+            const medianEnd = endValues[Math.floor(sims/2)];
+            const worst = endValues[Math.floor(sims*0.05)], best = endValues[Math.floor(sims*0.95)];
+            const expCAGR = (Math.pow(medianEnd/lastNav, 1/years)-1)*100;
+            document.getElementById('monteStats').innerHTML = `<div class="flex gap-4 items-center"><div class="text-right"><div class="text-pink-400 font-bold text-xs">Exp. End</div><div class="font-mono text-sm font-bold">$${Math.round(medianEnd).toLocaleString()}</div><div class="text-[9px] text-gray-500">${(worst/1000).toFixed(1)}k - ${(best/1000).toFixed(1)}k</div></div><div class="h-6 w-px bg-gray-700"></div><div class="text-center"><div class="text-gray-400 text-[9px] uppercase">CAGR</div><div class="font-mono text-xs text-gray-200">${expCAGR.toFixed(1)}%</div></div><div class="text-center"><div class="text-gray-400 text-[9px] uppercase">Exp. MaxDD</div><div class="font-mono text-xs text-red-400">${(simMaxDDs[Math.floor(sims/2)]*100).toFixed(1)}%</div><div class="text-[8px] text-gray-600">B: ${benchMetrics.MaxDD.toFixed(1)}%</div></div><div class="text-center"><div class="text-gray-400 text-[9px] uppercase">Exp. Vol</div><div class="font-mono text-xs text-blue-400">${(simVols[Math.floor(sims/2)]*100).toFixed(1)}%</div><div class="text-[8px] text-gray-600">B: ${benchMetrics.Vol.toFixed(1)}%</div></div></div>`;
+            Plotly.newPlot('monteDiv', paths, { title: { text: `Monte Carlo Forecast (${days} Days)`, font: {color: '#d1d5db', size: 12} }, margin: { l:40, r:10, b:30, t:30 }, showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', xaxis: {title:'Days',color:'#9ca3af'}, yaxis: {title:'Equity',color:'#9ca3af'} }, {displayModeBar: false});
+        }
+    </script>
+</body>
+</html>
