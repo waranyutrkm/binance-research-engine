@@ -325,7 +325,7 @@ P_{t+1} = P_t \cdot e^{(\mu - 0.5\sigma^2) + \sigma Z}
 
 ## 🚀 Live Demo
 
-👉 https://YOUR_GITHUB_USERNAME.github.io/binance-research-engine/
+👉 https://waranyutrkm.github.io/binance-research-engine/
 
 ---
 
